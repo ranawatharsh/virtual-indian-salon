@@ -153,7 +153,8 @@ h1, h2, h3, .sign { font-family: Georgia, "Palatino Linotype", "Times New Roman"
   white-space: nowrap; color: var(--cream); box-shadow: 4px 4px 0 rgba(0,0,0,0.5); }
 .bottom-bar .kbd { display: inline-block; background: var(--paper); color: var(--ink); border: 1.5px solid #000;
   border-radius: 4px; padding: 0 6px; margin: 0 2px; font-weight: 800; font-size: 11px; }
-.chat-box { width: 312px; padding: 0 0 9px; font-size: 13px; }
+.chat-box { position: absolute; bottom: 52px; left: 12px; width: 312px; padding: 0 0 9px;
+  font-size: 13px; box-shadow: 5px 5px 0 rgba(0, 0, 0, 0.55); }
 .chat-log { max-height: 150px; overflow-y: auto; margin: 0 9px 7px; display: flex; flex-direction: column; gap: 4px; }
 .chat-log .sys { color: var(--red); font-style: italic; font-family: Georgia, serif; }
 .chat-log div { background: #fffdf4; border: 1px solid #b99b5f; border-radius: 5px; padding: 3px 8px; color: var(--ink); }
