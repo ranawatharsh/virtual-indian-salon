@@ -15,6 +15,7 @@ import {
 } from "./multiplayer/socket";
 import { salonAudio } from "./audio/salonAudio";
 import { HAIRCUTS } from "./data";
+import { DANCE_NAMES } from "./game/SalonScene";
 
 type Screen = "landing" | "select" | "salon";
 
@@ -49,6 +50,7 @@ export default function App() {
   const myPos = useRef({ x: 0, z: 7 });
   const myRot = useRef(Math.PI);
   const myIdRef = useRef("");
+  const danceMoveRef = useRef(0); // 0 = auto-cycle, 1..5 = chosen move (keys 1-5)
   useEffect(() => {
     myIdRef.current = myId;
   }, [myId]);
@@ -373,7 +375,7 @@ export default function App() {
     }
   }, [chairs, handleMove, sayToast]);
 
-  // global keys: E interact, ESC menu
+  // global keys: E interact, ESC menu, 1-5 dance moves (WASD cancels the move)
   useEffect(() => {
     if (screen !== "salon") return;
     const h = (e: KeyboardEvent) => {
@@ -381,10 +383,21 @@ export default function App() {
       if (tag === "INPUT" || tag === "TEXTAREA") return;
       if (e.key.toLowerCase() === "e") doInteract();
       if (e.key === "Escape") setShowMenu((v) => !v);
+      if (!e.repeat && ["1", "2", "3", "4", "5"].includes(e.key)) {
+        const n = Number(e.key);
+        danceMoveRef.current = danceMoveRef.current === n ? 0 : n;
+        if (danceMoveRef.current > 0) {
+          getSocket().emit("emote", { emote: `d${danceMoveRef.current}` });
+          sayToast(`💃 ${DANCE_NAMES[danceMoveRef.current]}! (WASD to stop)`);
+        }
+      }
+      if (!e.repeat && ["w", "a", "s", "d"].includes(e.key.toLowerCase())) {
+        danceMoveRef.current = 0;
+      }
     };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [screen, doInteract]);
+  }, [screen, doInteract, sayToast]);
 
   // keep seatedChair in sync when server frees chair (haircutDone)
   useEffect(() => {
@@ -434,6 +447,7 @@ export default function App() {
         myName={name || "Guest"}
         remotes={remotes}
         agents={remoteAgents}
+        danceMoveRef={danceMoveRef}
         chairs={chairs}
         dialogues={dialogues}
         myPos={myPos}
@@ -482,7 +496,7 @@ export default function App() {
         onSend={(t) => getSocket().emit("chat", { text: t })}
         onEmote={(e) => getSocket().emit("emote", { emote: e })}
       />
-      <div className="bottom-bar">WASD Move &nbsp;|&nbsp; Shift Run &nbsp;|&nbsp; Drag Mouse to Look &nbsp;|&nbsp; E Interact &nbsp;|&nbsp; Enter Chat &nbsp;|&nbsp; ESC Menu</div>
+      <div className="bottom-bar">WASD Move &nbsp;|&nbsp; Shift Run &nbsp;|&nbsp; Drag Mouse to Look &nbsp;|&nbsp; E Interact &nbsp;|&nbsp; 1-5 Dance &nbsp;|&nbsp; Enter Chat &nbsp;|&nbsp; ESC Menu</div>
       {showMenu && (
         <div className="menu-overlay" onClick={() => setShowMenu(false)}>
           <div className="menu-card" onClick={(e) => e.stopPropagation()}>

@@ -562,9 +562,10 @@ function useBoneWalk(model: THREE.Group, moving: boolean) {
 }
 
 // Bone-driven DANCE for rigs with no dance clip (Xbot, idle-only files).
-// X/Y-axis moves only (safe on any humanoid bind pose); the pattern rotates
-// every few bars so the club doesn't look like one move on loop.
-function useBoneDance(model: THREE.Group, dancing: boolean) {
+// move: 0 = auto-cycle, 1..5 = Bounce, Sway, Twist, Snap, Groove (keys 1-5).
+// X/Y-axis moves only (safe on any humanoid bind pose).
+export const DANCE_NAMES = ["Auto", "Bounce", "Sway", "Twist", "Snap", "Groove"];
+function useBoneDance(model: THREE.Group, dancing: boolean, move = 0) {
   const rig = useMemo(() => {
     const spine = findBone(model, /spine\d*$/i) ?? findBone(model, /spine/i);
     const neck = findBone(model, /neck/i);
@@ -613,8 +614,8 @@ function useBoneDance(model: THREE.Group, dancing: boolean) {
     const s = Math.sin(ph);
     const c = Math.sin(ph + Math.PI);
     const s2 = Math.sin(ph * 2);
-    const move = Math.floor(ph / (Math.PI * 6)) % 3;
-    if (move === 0) {
+    const moveIdx = move >= 1 && move <= 5 ? move - 1 : Math.floor(ph / (Math.PI * 6)) % 5;
+    if (moveIdx === 0) {
       // bounce: big arm pumps, knee bounce, head nod
       put(b.thighL, s * 0.35 * amp);
       put(b.thighR, c * 0.35 * amp);
@@ -626,7 +627,7 @@ function useBoneDance(model: THREE.Group, dancing: boolean) {
       put(b.farmR, -0.4 * amp + s * 0.2 * amp);
       put(b.spine, 0.08 * amp + Math.abs(s) * 0.05 * amp);
       put(b.head, s2 * 0.15 * amp);
-    } else if (move === 1) {
+    } else if (moveIdx === 1) {
       // side sway
       const sway = Math.sin(ph * 0.5);
       put(b.spine, 0.05 * amp, 0, sway * 0.28 * amp);
@@ -636,7 +637,7 @@ function useBoneDance(model: THREE.Group, dancing: boolean) {
       put(b.uarmR, s * 0.5 * amp);
       put(b.head, 0, 0, sway * 0.12 * amp);
       put(b.neck, s2 * 0.08 * amp);
-    } else {
+    } else if (moveIdx === 2) {
       // twist: torso twist, knees together bounce, forearm pump
       put(b.spine, 0.06 * amp, s * 0.5 * amp);
       const j = Math.abs(s);
@@ -647,11 +648,35 @@ function useBoneDance(model: THREE.Group, dancing: boolean) {
       put(b.farmL, -0.6 * amp + s2 * 0.25 * amp);
       put(b.farmR, -0.6 * amp - s2 * 0.25 * amp);
       put(b.head, 0, c * 0.2 * amp);
+    } else if (moveIdx === 3) {
+      // snap: high knee lifts, overhead arm pumps
+      const liftL = Math.max(0, s);
+      const liftR = Math.max(0, c);
+      put(b.thighL, liftL * 0.8 * amp);
+      put(b.thighR, liftR * 0.8 * amp);
+      put(b.shinL, liftL * 0.7 * amp);
+      put(b.shinR, liftR * 0.7 * amp);
+      put(b.uarmL, -liftR * 0.9 * amp);
+      put(b.uarmR, -liftL * 0.9 * amp);
+      put(b.spine, Math.abs(s2) * 0.08 * amp);
+      put(b.head, Math.max(0, s2) * 0.1 * amp);
+    } else {
+      // groove: deep two-foot bounce, big head nod, low arms
+      const j = Math.abs(s);
+      put(b.thighL, j * 0.45 * amp);
+      put(b.thighR, j * 0.45 * amp);
+      put(b.shinL, j * 0.5 * amp);
+      put(b.shinR, j * 0.5 * amp);
+      put(b.uarmL, j * 0.3 * amp - 0.15 * amp);
+      put(b.uarmR, j * 0.3 * amp - 0.15 * amp);
+      put(b.spine, j * 0.12 * amp);
+      put(b.head, j * 0.25 * amp);
+      put(b.neck, j * 0.12 * amp);
     }
   });
 }
 
-function XbotModel({ avatarId, moving, dancing, emote, sitting }: { avatarId: string; moving: boolean; dancing: boolean; emote: string | null; sitting: boolean }) {
+function XbotModel({ avatarId, moving, dancing, emote, sitting, move }: { avatarId: string; moving: boolean; dancing: boolean; emote: string | null; sitting: boolean; move: number }) {
   const { scene, animations } = useGLTF(XBOT_URL) as unknown as { scene: THREE.Group; animations: THREE.AnimationClip[] };
   const model = useMemo(() => {
     const c = SkeletonUtils.clone(scene) as THREE.Group;
@@ -661,10 +686,10 @@ function XbotModel({ avatarId, moving, dancing, emote, sitting }: { avatarId: st
   useModelClip(
     model,
     animations,
-    sitting ? ["sitting", "sit", "seated"] : dancing ? RUN_C : moving ? WALK_C : emote ? AGREE_C : IDLE_C
+    sitting || dancing ? IDLE_C : moving ? WALK_C : emote ? AGREE_C : IDLE_C
   );
-  // Xbot ships no dance clip → bone-driven club moves instead of run-in-place
-  useBoneDance(model, dancing && !sitting);
+  // Xbot ships no dance clip → bone-driven club moves (never run-in-place)
+  useBoneDance(model, dancing && !sitting, move);
   const fit = useMemo(() => fitModel(model, 1.64), [model]);
   return (
     <group scale={fit.s} position={[0, fit.lift, 0]}>
@@ -699,7 +724,7 @@ function RobotModel({ moving, emote, sitting }: { moving: boolean; emote: string
 }
 
 /** User-provided Sketchfab model: textures preserved, auto-scaled to ~1.7m. */
-function CustomModel({ url, moving, dancing, emote, sitting }: { url: string; moving: boolean; dancing: boolean; emote: string | null; sitting: boolean }) {
+function CustomModel({ url, moving, dancing, emote, sitting, move }: { url: string; moving: boolean; dancing: boolean; emote: string | null; sitting: boolean; move: number }) {
   const { scene, animations } = useGLTF(url) as unknown as { scene: THREE.Group; animations: THREE.AnimationClip[] };
   const model = useMemo(() => SkeletonUtils.clone(scene) as THREE.Group, [scene]);
   const hasWalk = useMemo(() => !!findClip(animations, WALK_C), [animations]);
@@ -712,7 +737,7 @@ function CustomModel({ url, moving, dancing, emote, sitting }: { url: string; mo
   // bone-driven stride when the file ships no walk clip (idle-only rips)
   useBoneWalk(model, moving && !hasWalk && !sitting);
   // bone-driven club moves when the file ships no dance clip
-  useBoneDance(model, dancing && !hasDance && !sitting);
+  useBoneDance(model, dancing && !hasDance && !sitting, move);
   const fit = useMemo(() => fitModel(model, 1.64), [model]);
   return (
     <group scale={fit.s} position={[0, fit.lift, 0]}>
@@ -747,6 +772,7 @@ export function AvatarRig({
   dancing,
   waving,
   emote,
+  move,
   time,
 }: {
   avatarId: string;
@@ -755,6 +781,7 @@ export function AvatarRig({
   dancing: boolean;
   waving: boolean;
   emote: string | null;
+  move: number;
   time: number;
 }) {
   if (sitting && avatarId !== "robot") {
@@ -774,10 +801,10 @@ export function AvatarRig({
   }
   // custom Sketchfab model if the user dropped one in, else built-in Xbot
   const customUrl = modelUrlFor(avatarId);
-  const standing = <XbotModel avatarId={avatarId} moving={moving} dancing={dancing} emote={emote} sitting={false} />;
+  const standing = <XbotModel avatarId={avatarId} moving={moving} dancing={dancing} emote={emote} sitting={false} move={move} />;
   const seatedXbot = (
     <SeatedWrap>
-      <XbotModel avatarId={avatarId} moving={false} dancing={false} emote={null} sitting />
+      <XbotModel avatarId={avatarId} moving={false} dancing={false} emote={null} sitting move={0} />
     </SeatedWrap>
   );
   if (sitting) {
@@ -787,7 +814,7 @@ export function AvatarRig({
         <Suspense fallback={fallback}>
           <RigErrorBoundary fallback={seatedXbot} onError={() => missingUrls.add(customUrl)}>
             <SeatedWrap>
-              <CustomModel url={customUrl} moving={false} dancing={false} emote={null} sitting />
+              <CustomModel url={customUrl} moving={false} dancing={false} emote={null} sitting move={0} />
             </SeatedWrap>
           </RigErrorBoundary>
         </Suspense>
@@ -799,7 +826,7 @@ export function AvatarRig({
     <RigErrorBoundary fallback={fallback}>
       <Suspense fallback={standing}>
         <RigErrorBoundary fallback={standing} onError={() => missingUrls.add(customUrl)}>
-          <CustomModel url={customUrl} moving={moving} dancing={dancing} emote={emote} sitting={false} />
+          <CustomModel url={customUrl} moving={moving} dancing={dancing} emote={emote} sitting={false} move={move} />
         </RigErrorBoundary>
       </Suspense>
     </RigErrorBoundary>
@@ -900,7 +927,7 @@ function Environment({ time }: { time: number }) {
     []
   );
   const discoTex = useMemo(
-    () => textTexture(["🪩 DISCO →"], { bg: "#12041f", fg: "#ff2fb3", font: "bold 60px sans-serif" }),
+    () => textTexture(["🪩 CLUB BOLLYWOOD"], { bg: "#12041f", fg: "#ff2fb3", font: "bold 58px sans-serif" }),
     []
   );
   const clubNeonTex = useMemo(
@@ -1222,35 +1249,49 @@ function Environment({ time }: { time: number }) {
 
       {/* disco portal door (right wall) — walk up & press E */}
       <group position={[12.28, 0, 6]}>
-        {/* protruding golden arch */}
-        <mesh position={[-0.35, 1.5, -1.2]}>
-          <boxGeometry args={[0.7, 3.2, 0.35]} />
-          <meshStandardMaterial color="#ffb703" emissive="#ffb703" emissiveIntensity={0.25} />
+        {/* golden pillars + lintel framing a real doorway */}
+        <mesh position={[-0.3, 1.6, -1.35]}>
+          <boxGeometry args={[0.5, 3.2, 0.4]} />
+          <meshStandardMaterial color="#ffb703" emissive="#ffb703" emissiveIntensity={0.3} />
         </mesh>
-        <mesh position={[-0.35, 1.5, 1.2]}>
-          <boxGeometry args={[0.7, 3.2, 0.35]} />
-          <meshStandardMaterial color="#ffb703" emissive="#ffb703" emissiveIntensity={0.25} />
+        <mesh position={[-0.3, 1.6, 1.35]}>
+          <boxGeometry args={[0.5, 3.2, 0.4]} />
+          <meshStandardMaterial color="#ffb703" emissive="#ffb703" emissiveIntensity={0.3} />
         </mesh>
-        <mesh position={[-0.35, 3.15, 0]}>
-          <boxGeometry args={[0.7, 0.35, 2.75]} />
-          <meshStandardMaterial color="#ffb703" emissive="#ffb703" emissiveIntensity={0.25} />
+        <mesh position={[-0.3, 3.35, 0]}>
+          <boxGeometry args={[0.5, 0.4, 3.1]} />
+          <meshStandardMaterial color="#ffb703" emissive="#ffb703" emissiveIntensity={0.3} />
         </mesh>
-        {/* glowing portal */}
-        <mesh position={[-0.1, 1.45, 0]} rotation={[0, -Math.PI / 2, 0]}>
-          <circleGeometry args={[1.05 + 0.06 * Math.sin(time * 4), 28]} />
-          <meshStandardMaterial color="#0a0616" emissive="#a855f7" emissiveIntensity={1.4} transparent opacity={0.92} />
+        {/* dark passage recess */}
+        <mesh position={[-0.08, 1.55, 0]}>
+          <boxGeometry args={[0.12, 2.9, 2.3]} />
+          <meshStandardMaterial color="#07030f" />
         </mesh>
-        <mesh position={[-0.1, 3.35, 0]} rotation={[0, -Math.PI / 2, 0]}>
-          <planeGeometry args={[2.2, 0.7]} />
-          <meshStandardMaterial map={discoTex} emissive="#ffffff" emissiveMap={discoTex} emissiveIntensity={0.9} />
+        {/* glowing portal + bright core */}
+        <mesh position={[-0.16, 1.35, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <circleGeometry args={[0.72 + 0.05 * Math.sin(time * 4), 28]} />
+          <meshStandardMaterial color="#150826" emissive="#a855f7" emissiveIntensity={1.6} transparent opacity={0.95} />
         </mesh>
-        {/* red-carpet threshold */}
-        <mesh position={[-0.9, 0.02, 0]}>
-          <boxGeometry args={[1.6, 0.04, 2.0]} />
+        <mesh position={[-0.17, 1.35, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <circleGeometry args={[0.34, 20]} />
+          <meshStandardMaterial color="#ffffff" emissive="#f0abfc" emissiveIntensity={2} />
+        </mesh>
+        {/* marquee sign above the lintel */}
+        <mesh position={[-0.15, 4.05, 0]} rotation={[0, -Math.PI / 2, 0]}>
+          <planeGeometry args={[3.0, 0.75]} />
+          <meshStandardMaterial map={discoTex} emissive="#ffffff" emissiveMap={discoTex} emissiveIntensity={1} />
+        </mesh>
+        {/* red carpet leading in */}
+        <mesh position={[-1.6, 0.02, 0]}>
+          <boxGeometry args={[3.0, 0.04, 2.0]} />
           <meshStandardMaterial color="#9d0208" />
         </mesh>
-        <pointLight position={[-1.2, 2.2, 0]} intensity={8} distance={7} color="#c084fc" />
-        <Html position={[-0.6, 4.1 + 0.12 * Math.sin(time * 2.5), 0]} center distanceFactor={12}>
+        <mesh position={[-1.6, 0.045, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          <planeGeometry args={[2.6, 1.6]} />
+          <meshStandardMaterial color="#7b2ff7" emissive="#7b2ff7" emissiveIntensity={0.8} transparent opacity={0.5} />
+        </mesh>
+        <pointLight position={[-1.4, 2.4, 0]} intensity={8} distance={7} color="#c084fc" />
+        <Html position={[-0.6, 4.75 + 0.12 * Math.sin(time * 2.5), 0]} center distanceFactor={12}>
           <div style={{ fontSize: 26 }}>🪩</div>
         </Html>
       </group>
@@ -1531,31 +1572,39 @@ function Environment({ time }: { time: number }) {
       </group>
       {/* return door to salon (left wall) */}
       <group position={[28.28, 0, 6]}>
-        <mesh position={[0.35, 1.5, -1.2]}>
-          <boxGeometry args={[0.7, 3.2, 0.35]} />
-          <meshStandardMaterial color="#ffb703" emissive="#ffb703" emissiveIntensity={0.25} />
+        <mesh position={[0.3, 1.6, -1.35]}>
+          <boxGeometry args={[0.5, 3.2, 0.4]} />
+          <meshStandardMaterial color="#ffb703" emissive="#ffb703" emissiveIntensity={0.3} />
         </mesh>
-        <mesh position={[0.35, 1.5, 1.2]}>
-          <boxGeometry args={[0.7, 3.2, 0.35]} />
-          <meshStandardMaterial color="#ffb703" emissive="#ffb703" emissiveIntensity={0.25} />
+        <mesh position={[0.3, 1.6, 1.35]}>
+          <boxGeometry args={[0.5, 3.2, 0.4]} />
+          <meshStandardMaterial color="#ffb703" emissive="#ffb703" emissiveIntensity={0.3} />
         </mesh>
-        <mesh position={[0.35, 3.15, 0]}>
-          <boxGeometry args={[0.7, 0.35, 2.75]} />
-          <meshStandardMaterial color="#ffb703" emissive="#ffb703" emissiveIntensity={0.25} />
+        <mesh position={[0.3, 3.35, 0]}>
+          <boxGeometry args={[0.5, 0.4, 3.1]} />
+          <meshStandardMaterial color="#ffb703" emissive="#ffb703" emissiveIntensity={0.3} />
         </mesh>
-        <mesh position={[0.1, 1.45, 0]} rotation={[0, Math.PI / 2, 0]}>
-          <circleGeometry args={[1.05 + 0.06 * Math.sin(time * 4), 28]} />
-          <meshStandardMaterial color="#2a1a08" emissive="#ffb703" emissiveIntensity={1.1} transparent opacity={0.92} />
+        <mesh position={[0.08, 1.55, 0]}>
+          <boxGeometry args={[0.12, 2.9, 2.3]} />
+          <meshStandardMaterial color="#140b02" />
         </mesh>
-        <mesh position={[0.1, 3.35, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <mesh position={[0.16, 1.35, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <circleGeometry args={[0.72 + 0.05 * Math.sin(time * 4), 28]} />
+          <meshStandardMaterial color="#2a1a08" emissive="#ffb703" emissiveIntensity={1.4} transparent opacity={0.95} />
+        </mesh>
+        <mesh position={[0.17, 1.35, 0]} rotation={[0, Math.PI / 2, 0]}>
+          <circleGeometry args={[0.34, 20]} />
+          <meshStandardMaterial color="#ffffff" emissive="#ffd60a" emissiveIntensity={2} />
+        </mesh>
+        <mesh position={[0.15, 4.05, 0]} rotation={[0, Math.PI / 2, 0]}>
           <planeGeometry args={[2.2, 0.7]} />
-          <meshStandardMaterial map={salonBackTex} emissive="#ffffff" emissiveMap={salonBackTex} emissiveIntensity={0.9} />
+          <meshStandardMaterial map={salonBackTex} emissive="#ffffff" emissiveMap={salonBackTex} emissiveIntensity={1} />
         </mesh>
-        <mesh position={[0.9, 0.02, 0]}>
-          <boxGeometry args={[1.6, 0.04, 2.0]} />
+        <mesh position={[1.6, 0.02, 0]}>
+          <boxGeometry args={[3.0, 0.04, 2.0]} />
           <meshStandardMaterial color="#9d0208" />
         </mesh>
-        <Html position={[0.6, 4.1 + 0.12 * Math.sin(time * 2.5), 0]} center distanceFactor={12}>
+        <Html position={[0.6, 4.75 + 0.12 * Math.sin(time * 2.5), 0]} center distanceFactor={12}>
           <div style={{ fontSize: 26 }}>💈</div>
         </Html>
       </group>
@@ -1602,17 +1651,18 @@ function Barbers({ chairs, dialogues, time }: { chairs: ChairInfo[]; dialogues: 
 // ---------- player rigs ----------
 function RemoteRig({ p, agent, time }: { p: RemotePlayer; agent: AgentInfo | undefined; time: number }) {
   const clubbed = isClubX(p.x);
-  const dancing = p.emote === "dance" || clubbed; // everyone dances in the club
+  const dm = p.emote && /^d[1-5]$/.test(p.emote) ? Number(p.emote[1]) : 0;
+  const dancing = p.emote === "dance" || clubbed || dm > 0; // everyone dances in the club
   const waving = p.emote === "wave";
   const seated = p.activity === "GETTING_HAIRCUT" || p.activity === "SITTING";
   const moving = p.activity === "WALKING";
   return (
     <group position={[p.x, 0, p.z]} rotation={[0, p.rotY, 0]}>
-      <AvatarRig avatarId={p.avatarId} moving={moving} sitting={seated} dancing={dancing} waving={waving} emote={p.emote} time={time} />
+      <AvatarRig avatarId={p.avatarId} moving={moving} sitting={seated} dancing={dancing} waving={waving} emote={p.emote} move={dm} time={time} />
       <Html position={[0, 2.35, 0]} center distanceFactor={10}>
         <div style={{ textAlign: "center" }}>
           <div style={{ background: "#000000aa", color: "#fff", fontSize: 11, padding: "2px 8px", borderRadius: 8, whiteSpace: "nowrap" }}>
-            {p.name} {p.emote === "laugh" ? "😂" : p.emote === "wave" ? "👋" : p.emote === "dance" ? "💃" : p.emote === "thumbs" ? "👍" : ""}
+            {p.name} {p.emote === "laugh" ? "😂" : p.emote === "wave" ? "👋" : p.emote === "dance" || (p.emote && /^d[1-5]$/.test(p.emote)) ? "💃" : p.emote === "thumbs" ? "👍" : ""}
           </div>
           {agent && (
             <div style={{ background: "#1d3557ee", color: "#fff", fontSize: 10, padding: "2px 8px", borderRadius: 8, marginTop: 2, whiteSpace: "nowrap", border: "1px solid #4cc9f055" }}>
@@ -1654,6 +1704,7 @@ export function SalonScene({
   sofaSeated,
   onMove,
   agents,
+  danceMoveRef,
 }: {
   myId: string;
   myAvatar: string;
@@ -1668,6 +1719,7 @@ export function SalonScene({
   onMove: (x: number, z: number, rotY: number, walking: boolean) => void;
   interactRef: React.MutableRefObject<InteractTarget>;
   agents: Record<string, AgentInfo>;
+  danceMoveRef: React.MutableRefObject<number>;
 }) {
   const [time, setTime] = useState(0);
   return (
@@ -1690,6 +1742,7 @@ export function SalonScene({
         seatedChair={seatedChair}
         sofaSeated={sofaSeated}
         onMove={onMove}
+        danceMoveRef={danceMoveRef}
         time={time}
       />
       {Object.values(remotes).map((p) => (
@@ -1723,6 +1776,7 @@ function LocalPlayer({
   seatedChair,
   sofaSeated,
   onMove,
+  danceMoveRef,
   time,
 }: {
   myId: string;
@@ -1733,6 +1787,7 @@ function LocalPlayer({
   seatedChair: number | null;
   sofaSeated: boolean;
   onMove: (x: number, z: number, rotY: number, walking: boolean) => void;
+  danceMoveRef: React.MutableRefObject<number>;
   time: number;
 }) {
   const ref = useRef<THREE.Group>(null);
@@ -1855,9 +1910,10 @@ function LocalPlayer({
         avatarId={myAvatar}
         moving={!seatedChair && !sofaSeated && !!(keys["w"] || keys["a"] || keys["s"] || keys["d"])}
         sitting={seatedChair !== null || sofaSeated}
-        dancing={isClubX(myPos.current.x)}
+        dancing={isClubX(myPos.current.x) || danceMoveRef.current > 0}
         waving={false}
         emote={null}
+        move={danceMoveRef.current}
         time={time}
       />
       <Html position={[0, 2.4, 0]} center distanceFactor={10}>

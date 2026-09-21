@@ -68,6 +68,10 @@ npx tsx src/test-chair.ts   # chair lifecycle + double-book guard + agent webhoo
 - **Proper walk cycle** — mocap clips where present, hip/shoulder-pivot procedural
   otherwise (including bone-driven stride on idle-only rips), counter-swinging arms,
   stride bob, forward lean, smooth start/stop blending, idle breathing
+- **Real mirrors** — planar reflections behind every chair: watch yourself actually get the haircut
+- **Club dance moves** — mocap `Dance` where files have it, else a 5-move bone-driven
+  routine (Bounce, Sway, Twist, Snap, Groove): auto-cycles in the club, or press
+  **1–5** anywhere to hit a specific move (WASD stops). Moves sync to other players.
 - **Full 3D Indian salon (bigger room)** — 5 barber chairs (mirrors, stations, torans),
   flipped waiting sofa **facing the barbers**, coffee table with cutting chai, reception,
   wall clock, 2 ceiling fans, tube lights, old TV, product shelves, backwash unit,
@@ -117,6 +121,21 @@ npm run agent -- --name Harsh --provider Antigravity --task "Refactoring auth" -
 
 Everyone in the salon sees everyone else's agent live: provider icon + name +
 progress bar floats over each player's head (try two tabs: `Harsh` + `Rahul`).
+In-game: Agent panel → **🔌 Connect real agent** → pick provider → Copy command → run in `server/`.
+
+## GitHub / publish checklist (do before going public)
+
+```bash
+git init (done) → create repo on github.com → 
+git remote add origin https://github.com/YOU/virtual-indian-salon.git
+git push -u origin master
+```
+
+⚠️ **Before pushing PUBLIC or deploying:** delete the Detroit `.glb` files from
+`client/public/models/` (ripped game IP — DMCA risk) or keep the repo **private**.
+The game falls back to Xbot automatically. Swap in verified CC0/CC-BY models first.
+Deploy later: frontend `client/dist` → Vercel/Netlify, backend → Render/Railway/Fly
+(`PORT` + `VITE_SERVER_URL`), or `docker compose up --build`.
 
 **2. One-shot updates** from hooks/scripts/CI:
 

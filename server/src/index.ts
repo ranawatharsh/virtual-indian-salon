@@ -375,7 +375,7 @@ io.on("connection", (socket: Socket) => {
   socket.on("emote", (data: { emote?: string }) => {
     const p = players.get(socket.id);
     if (!p) return;
-    const allowed = ["laugh", "wave", "dance", "thumbs"];
+    const allowed = ["laugh", "wave", "dance", "thumbs", "d1", "d2", "d3", "d4", "d5"];
     const em = String(data?.emote ?? "");
     if (!allowed.includes(em)) return;
     p.emote = em;
