@@ -1,0 +1,16 @@
+services:
+  server:
+    build: ./server
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+    restart: unless-stopped
+
+  client:
+    build: ./client
+    ports:
+      - "5173:80"
+    depends_on:
+      - server
+    restart: unless-stopped

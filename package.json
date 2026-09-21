@@ -1,0 +1,15 @@
+{
+  "name": "virtual-indian-salon",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Virtual Indian Salon — While AI Works, Get a Haircut",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present",
+    "start": "npm run start --workspace=server"
+  }
+}

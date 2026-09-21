@@ -1,0 +1,31 @@
+Free 3D models vendored for offline use (no runtime CDN dependency).
+
+1) Xbot.glb
+   Source: three.js example models (https://github.com/mrdoob/three.js
+   → examples/models/gltf/Xbot.glb, MIT-licensed repo; model is a
+   Mixamo rig distributed with three.js examples, free to use).
+   Anim clips used: idle / walk / run / agree.
+   Used for: all human player avatars (tinted per avatar).
+
+2) RobotExpressive.glb
+   Source: three.js example models (examples/models/gltf/RobotExpressive/).
+   Author: Tomas Laulhe, licensed CC-BY 4.0
+   (https://creativecommons.org/licenses/by/4.0/).
+   Attribution: "RobotExpressive by Tomas Laulhe, CC-BY 4.0".
+   Anim clips used: Idle / Walking / Dance / Wave / ThumbsUp / Yes / Sitting.
+   Used for: the "Salon Robot" avatar option.
+
+If a model fails to load for any reason the game automatically falls back
+to the built-in procedural avatar — the salon stays playable.
+
+3) Detroit: Become Human characters (kara / elijah_kamski / todd)
+   ⚠️ UNVERIFIED LICENSE — these look like ripped proprietary game assets
+   (Sony / Quantic Dream IP) uploaded to Sketchfab by a third party. There is
+   no reliable CC grant for game rips. FINE for local play with friends, but
+   DO NOT ship these on a public website — replace with verified CC0/CC-BY
+   models (e.g. Quaternius) before any public deployment.
+   Mapped: kara → female, elijah_kamski → cool, todd → bearded.
+   (carl_manfred file present but NOT wired: static unrigged scene rip.)
+
+4) carl_manfred_-_detroit_become_human.glb — present, intentionally unused
+   (static, no skeleton/animations, odd bounds — likely a scene rip).
