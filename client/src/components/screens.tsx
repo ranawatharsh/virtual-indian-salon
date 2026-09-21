@@ -11,6 +11,7 @@ export function LandingPage({ onEnter, online }: { onEnter: () => void; online: 
         <span className="gold">GET A HAIRCUT. 💈</span>
       </h1>
       <p className="sub">Your agent is grinding. You deserve a break.</p>
+      <div className="est">★ EST. 1998 • BANDRA WEST ★</div>
       <div className="feat-chips">
         <span>🚶 Walk around</span>
         <span>💈 Join the queue</span>
@@ -124,13 +125,12 @@ export function useOnlineCount(): number | null {
     let stop = false;
     const fetchIt = async () => {
       try {
-        const base =
-          (import.meta as any).env?.VITE_SERVER_URL ?? "http://localhost:3001";
-        const r = await fetch(`${base}/api/online`);
+        const { serverHttpBase } = await import("../multiplayer/socket");
+        const r = await fetch(`${serverHttpBase()}/api/online`);
         const j = await r.json();
         if (!stop) setN(j.count ?? 0);
       } catch {
-        /* ignore */
+        /* salon server offline — landing still works */
       }
     };
     fetchIt();

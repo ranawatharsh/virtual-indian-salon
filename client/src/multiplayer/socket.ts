@@ -59,6 +59,11 @@ const SERVER_URL =
     ? `http://${window.location.hostname}:3001`
     : "http://localhost:3001");
 
+/** Same host, plain https URL (for REST calls like /api/online). */
+export function serverHttpBase(): string {
+  return SERVER_URL.replace(/^ws(s)?:\/\//, (_m: string, s: string) => `http${s ? "s" : ""}://`);
+}
+
 let socket: Socket | null = null;
 
 export function getSocket(): Socket {

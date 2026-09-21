@@ -496,7 +496,7 @@ export default function App() {
         onSend={(t) => getSocket().emit("chat", { text: t })}
         onEmote={(e) => getSocket().emit("emote", { emote: e })}
       />
-      <div className="bottom-bar">WASD Move &nbsp;|&nbsp; Shift Run &nbsp;|&nbsp; Drag Mouse to Look &nbsp;|&nbsp; E Interact &nbsp;|&nbsp; 1-5 Dance &nbsp;|&nbsp; Enter Chat &nbsp;|&nbsp; ESC Menu</div>
+      <div className="bottom-bar"><span className="kbd">WASD</span> Move <span className="kbd">Shift</span> Run <span className="kbd">Mouse</span> Look <span className="kbd">E</span> Interact <span className="kbd">1-5</span> Dance <span className="kbd">Enter</span> Chat <span className="kbd">ESC</span> Menu</div>
       {showMenu && (
         <div className="menu-overlay" onClick={() => setShowMenu(false)}>
           <div className="menu-card" onClick={(e) => e.stopPropagation()}>
