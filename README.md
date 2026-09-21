@@ -184,12 +184,22 @@ Notes / troubleshooting:
 
 ## Production build
 
-```bash
-cd server && npm run build && npm start        # serves on $PORT (default 3001)
-cd client && npm run build                     # outputs static dist/
-```
+## Deploy (Render, one click)
 
-Deploy frontend `client/dist` to Vercel/Netlify, backend to Render/Railway/Fly with:
+1. Push this repo to GitHub (see GitHub section above).
+2. Render Dashboard → **New → Blueprint** → select the repo. `render.yaml` creates
+   `salon-server` (Node + WebSockets) and `salon-client` (static), auto-wired via
+   `VITE_SERVER_HOST`. Hit Apply — live in a few minutes on free plans.
+3. First load after idle takes ~50s (free-plan sleep). Upgrade server to Starter
+   ($7/mo) to kill the cold start when traffic comes.
+
+Local production check (same commands Render runs):
+
+```bash
+npm run build --workspace=salon-server
+npm run build --workspace=salon-client
+npm start --workspace=salon-server
+```
 
 | Var | Where | Default | Purpose |
 |---|---|---|---|

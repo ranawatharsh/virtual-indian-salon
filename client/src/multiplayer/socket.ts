@@ -51,8 +51,10 @@ export interface ChatMsg {
   system?: boolean;
 }
 
+const _env = (import.meta as any).env ?? {};
 const SERVER_URL =
-  (import.meta as any).env?.VITE_SERVER_URL ??
+  _env.VITE_SERVER_URL ??
+  (_env.VITE_SERVER_HOST ? `https://${_env.VITE_SERVER_HOST}` : null) ??
   (typeof window !== "undefined" && window.location.hostname
     ? `http://${window.location.hostname}:3001`
     : "http://localhost:3001");

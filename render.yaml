@@ -1,0 +1,42 @@
+# One-click deploy: Render Dashboard → New → Blueprint → pick this repo.
+# Creates salon-server (Node + WebSockets) and salon-client (static Vite build),
+# with the client automatically pointed at the server. Free plans to start
+# (server sleeps when idle — first load after silence takes ~50s).
+services:
+  - type: web
+    name: salon-server
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build --workspace=salon-server
+    startCommand: npm start --workspace=salon-server
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+    buildFilter:
+      paths:
+        - server/**
+        - package.json
+        - package-lock.json
+
+  - type: web
+    name: salon-client
+    runtime: static
+    buildCommand: npm install && npm run build --workspace=salon-client
+    staticPublishPath: client/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: VITE_SERVER_HOST
+        fromService:
+          name: salon-server
+          type: web
+          property: host
+    buildFilter:
+      paths:
+        - client/**
+        - package.json
+        - package-lock.json
